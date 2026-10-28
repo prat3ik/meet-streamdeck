@@ -4,7 +4,7 @@
 
 import { Resvg } from "@resvg/resvg-js";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import * as esbuild from "esbuild";
 
@@ -22,6 +22,10 @@ const GLYPH = {
 	newCall: "M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4zM14 13h-3v3H9v-3H6v-2h3V8h2v3h3v2z",
 	leave: "M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z",
 	goto: "M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z",
+	slack: "M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z",
+	back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z",
+	apps: "M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z",
+	profile: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88C7.55 15.8 9.68 15 12 15s4.45.8 6.14 2.12C16.43 19.18 14.03 20 12 20z",
 };
 
 const COLOR = { blue: "#1a73e8", green: "#188038", red: "#d93025", slate: "#3c4043", teal: "#00796b" };
@@ -74,6 +78,7 @@ await esbuild.build({
 	logLevel: "warning",
 });
 writeFileSync(`${OUT}/bin/package.json`, `{ "type": "module" }\n`);
+cpSync("ui", `${OUT}/ui`, { recursive: true });
 
 // --- images ------------------------------------------------------------------
 
@@ -85,10 +90,15 @@ const keys = {
 	"cam-off": { bg: COLOR.red, glyph: GLYPH.camOff, label: "Cam Off" },
 	"leave": { bg: COLOR.slate, glyph: GLYPH.leave, label: "Leave" },
 	"goto": { bg: COLOR.teal, glyph: GLYPH.goto, label: "Go to Meet", labelTop: true },
+	"profile": { bg: COLOR.slate, glyph: GLYPH.profile, label: "", labelTop: true },
+	"slack": { bg: "#4a154b", glyph: GLYPH.slack, label: "", labelTop: true },
+	"apps-folder": { bg: "#1f1f1f", glyph: GLYPH.apps, label: "Open Apps" },
+	"back": { bg: "#1f1f1f", glyph: GLYPH.back, label: "Back" },
 };
 for (const [name, spec] of Object.entries(keys)) png2x(keySvg(spec), 72, `${OUT}/imgs/keys/${name}`);
+png2x(`<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144"><rect width="144" height="144" fill="#000"/></svg>`, 72, `${OUT}/imgs/keys/blank`);
 
-const actionIcons = { new: GLYPH.newCall, mic: GLYPH.mic, camera: GLYPH.cam, leave: GLYPH.leave, goto: GLYPH.goto };
+const actionIcons = { new: GLYPH.newCall, mic: GLYPH.mic, camera: GLYPH.cam, leave: GLYPH.leave, goto: GLYPH.goto, profile: GLYPH.profile, slack: GLYPH.slack, app: GLYPH.apps, back: GLYPH.back };
 for (const [name, glyph] of Object.entries(actionIcons)) png2x(iconSvg(glyph), 20, `${OUT}/imgs/actions/${name}`);
 png2x(iconSvg(GLYPH.cam), 28, `${OUT}/imgs/category`);
 png2x(roundedSvg(GLYPH.newCall), 256, `${OUT}/imgs/plugin`);
@@ -124,13 +134,24 @@ const manifest = {
 	Software: { MinimumVersion: "6.6" },
 	OS: [{ Platform: "mac", MinimumVersion: "12" }],
 	Actions: [
+		action("back", "Back", "Leave the Meet/Zoom keys and return to your own profile", [face("back")]),
 		action("new", "New Meeting", "Create a new Google Meet and join it", [face("new")]),
 		action("mic", "Microphone", "Mute or unmute your Google Meet microphone", [face("mic-on"), face("mic-off")], { DisableAutomaticStates: true }),
 		action("camera", "Camera", "Turn your Google Meet camera on or off", [face("cam-on"), face("cam-off")], { DisableAutomaticStates: true }),
 		action("leave", "Leave Call", "Leave the current Google Meet call", [face("leave")]),
 		action("goto", "Go to Meeting", "Jump to your open Google Meet tabs, one after another, across Chrome profiles", [face("goto", true)]),
+		action("profile", "Chrome Profile", "Bring a Chrome profile to the front (its existing window, or a new one)", [face("profile", true)], {
+			PropertyInspectorPath: "ui/profile.html",
+		}),
+		action("slack", "Slack Workspace", "Switch the Slack app to a workspace", [face("slack", true)], {
+			PropertyInspectorPath: "ui/slack.html",
+		}),
+		// One key per slot (settings.slot = 0..13) in an "Open Apps" folder; filled with running apps.
+		action("app", "Open App", "Shows one of the apps that are running; press to switch to it", [face("blank", true)], {
+			VisibleInActionsList: false,
+		}),
 	],
-	Profiles: ["Meet Home", "Meet Live"].map((name) => ({
+	Profiles: ["Meet Home", "Meet Live", "Zoom"].map((name) => ({
 		Name: `profiles/${name}`,
 		DeviceType: 0,
 		Readonly: false,
@@ -142,21 +163,22 @@ writeFileSync(`${OUT}/manifest.json`, JSON.stringify(manifest, null, "\t") + "\n
 
 // --- bundled profiles ----------------------------------------------------------
 
-const slot = (id, name, nStates = 1) => ({
+const slot = (id, name, nStates = 1, settings = {}) => ({
 	Name: name,
-	Settings: {},
+	Settings: settings,
 	State: 0,
 	States: Array.from({ length: nStates }, () => ({
 		FFamily: "", FSize: "", FStyle: "", FUnderline: "", Image: "", Title: "", TitleAlignment: "", TitleColor: "", TitleShow: "",
 	})),
-	UUID: `${UUID}.${id}`,
+	// Ids with a dot are other plugins' actions (e.g. Elgato's Zoom plugin).
+	UUID: id.includes(".") ? id : `${UUID}.${id}`,
 });
 
 // Keys are addressed "column,row" on the 5x3 MK.2.
 const profiles = {
 	"Meet Home": {
 		uuid: "6B1F6C2E-3F7A-4C1D-9A51-2B7E0C1A0001",
-		actions: { "0,0": slot("new", "New Meeting"), "1,0": slot("goto", "Go to Meeting") },
+		actions: { "0,0": slot("new", "New Meeting"), "1,0": slot("goto", "Go to Meeting"), "0,2": slot("back", "Back") },
 	},
 	"Meet Live": {
 		uuid: "6B1F6C2E-3F7A-4C1D-9A51-2B7E0C1A0002",
@@ -165,6 +187,19 @@ const profiles = {
 			"1,0": slot("camera", "Camera", 2),
 			"2,0": slot("goto", "Go to Meeting"),
 			"4,2": slot("leave", "Leave Call"),
+			"0,2": slot("back", "Back"),
+		},
+	},
+	// Shown while Zoom is the frontmost app; uses Elgato's Zoom plugin.
+	"Zoom": {
+		uuid: "6B1F6C2E-3F7A-4C1D-9A51-2B7E0C1A0003",
+		actions: {
+			"0,0": slot("com.elgato.zoom.video", "Video", 2),
+			"1,0": slot("com.elgato.zoom.mute", "Audio", 2),
+			"2,0": slot("com.elgato.zoom.react", "React", 2, { emoji: "clap", tone: "default_tone" }),
+			"3,0": slot("com.elgato.zoom.raisehand", "Raise Hand", 2),
+			"4,0": slot("com.elgato.zoom.sendchat", "Send to Chat", 1, { message: "" }),
+			"0,2": slot("back", "Back"),
 		},
 	},
 };

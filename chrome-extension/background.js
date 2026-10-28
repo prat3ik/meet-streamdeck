@@ -11,6 +11,13 @@ const pendingJoin = new Set();
 let focus = { focused: false, activeTabId: null };
 let ws = null;
 
+// The Google account this Chrome profile is signed in to; the plugin matches it
+// against Chrome's profile list to know which profile this extension runs in.
+const email = chrome.identity
+	.getProfileUserInfo({ accountStatus: "ANY" })
+	.then((info) => info.email)
+	.catch(() => "");
+
 // The service worker can be stopped at any time; keep tab state in session storage.
 const ready = chrome.storage.session.get(["tabs", "pendingJoin"]).then((s) => {
 	for (const [id, t] of Object.entries(s.tabs ?? {})) tabs.set(Number(id), t);
@@ -59,6 +66,7 @@ function sendSnapshot() {
 			JSON.stringify({
 				type: "snapshot",
 				version: chrome.runtime.getManifest().version,
+				email: await email,
 				focused: focus.focused,
 				activeTabId: focus.activeTabId,
 				tabs: [...tabs].map(([tabId, t]) => ({ tabId, ...t })),
@@ -98,6 +106,13 @@ async function handleCmd({ cmd, tabId }) {
 				pendingJoin.add(tab.id);
 				persist();
 				await chrome.windows.update(tab.windowId, { focused: true });
+				break;
+			}
+			case "focusProfile": {
+				const win = await chrome.windows.getLastFocused({ windowTypes: ["normal"] }).catch(() => null);
+				if (win) await chrome.windows.update(win.id, { focused: true, ...(win.state === "minimized" ? { state: "normal" } : {}) });
+				// No window left: bring back the most recently closed one with its tabs.
+				else if (!(await chrome.sessions.restore().catch(() => null))) await chrome.windows.create({ focused: true });
 				break;
 			}
 			case "reloadExtension": // lets the plugin pick up a new build without a manual reload

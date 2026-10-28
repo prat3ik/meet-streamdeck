@@ -6,9 +6,21 @@ Your Elgato Stream Deck follows your Google Meet tabs in Chrome:
 - **In a call** (in any tab, any window, any Chrome profile, even when Chrome isn't in front) → the deck shows **Mic**, **Camera** (green = on, red = off, always in sync with Meet), **Go to Meeting** and **Leave**.
 - **No Meet tab** → the deck goes back to your own profile.
 
+- **Zoom in front** (the app or its meeting window) → the deck shows your Zoom keys (Elgato's Zoom plugin): video, audio, react, raise hand, send to chat.
+
+Every automatic layout has a **Back** key (bottom left) that returns to your own profile until you leave and come back.
+
 **Go to Meeting** jumps to your open meetings. The first press goes to the first meeting you opened, the next press goes to the second, and so on, across Chrome windows and Chrome profiles.
 
 ![Keys](docs/keys.png)
+
+## Extra keys
+
+- **Chrome Profile**: brings a Chrome profile to the front, reusing its existing window (or restoring its last closed one). Shows the profile's Google photo, with a green ring on the active profile. Needs the extension in that profile; otherwise Chrome opens a new window.
+- **Slack Workspace**: switches the Slack desktop app to a workspace (`slack://open?team=…`), shown with the workspace logo.
+- **Open App**: one key per slot (`settings.slot`) in a folder; together they show the apps that are running, most recent first, with their icons. Press to switch.
+
+Everything is also reachable by deep link, e.g. for Raycast or Shortcuts: `streamdeck://plugins/message/com.alphabin.gmeet/<command>` with `chrome-profile?dir=Profile%201`, `slack?team=T0123`, `new-meeting`, `mic`, `camera`, `leave`, `go-to-meeting`, `reload-extension`.
 
 ## How it works
 
