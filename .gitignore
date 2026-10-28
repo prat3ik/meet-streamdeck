@@ -1,0 +1,4 @@
+node_modules/
+plugin/com.alphabin.gmeet.sdPlugin/
+plugin/build-tmp/
+.DS_Store
