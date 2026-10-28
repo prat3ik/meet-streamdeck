@@ -58,6 +58,7 @@ function sendSnapshot() {
 		ws.send(
 			JSON.stringify({
 				type: "snapshot",
+				version: chrome.runtime.getManifest().version,
 				focused: focus.focused,
 				activeTabId: focus.activeTabId,
 				tabs: [...tabs].map(([tabId, t]) => ({ tabId, ...t })),
@@ -99,6 +100,9 @@ async function handleCmd({ cmd, tabId }) {
 				await chrome.windows.update(tab.windowId, { focused: true });
 				break;
 			}
+			case "reloadExtension": // lets the plugin pick up a new build without a manual reload
+				chrome.runtime.reload();
+				break;
 			case "close":
 				await chrome.tabs.remove(tabId);
 				break;

@@ -2,7 +2,9 @@
 // and clicks Meet's own buttons when the Stream Deck asks it to.
 // Wrapped in an IIFE so it can be injected again after the extension reloads.
 (() => {
-	const CODE_RE = /^\/[a-z]+-[a-z]+-[a-z]+(\/|$)/i;
+	// Meeting URLs look like /abc-defg-hij or /meet/abc-defg-hij (multi-account).
+	const CODE_RE = /^\/(?:meet\/)?([a-z]+-[a-z]+-[a-z]+)(\/|$)/i;
+	const HOME_RE = /^\/(?:meet\/?)?(?:landing\/?|home\/?)?$/i;
 	const TOGGLE_RE = /^turn (on|off) (microphone|camera)/i;
 
 	/** Meet's mic/camera toggle; its label says what pressing it will do. */
@@ -18,11 +20,12 @@
 
 	function read() {
 		const path = location.pathname;
-		const isCode = CODE_RE.test(path);
+		const code = path.match(CODE_RE)?.[1] ?? null;
+		const isCode = !!code;
 		const mic = toggleButton("microphone");
 		const cam = toggleButton("camera");
 		let kind = "other";
-		if (!isCode) kind = path === "/" || path.startsWith("/landing") ? "home" : "other";
+		if (!isCode) kind = HOME_RE.test(path) ? "home" : "other";
 		else if (leaveButton()) kind = "call";
 		else if (mic || cam) kind = "lobby"; // the "Ready to join?" screen
 		return {
@@ -30,7 +33,7 @@
 			kind,
 			mic: mic ? mic.on : null,
 			cam: cam ? cam.on : null,
-			code: isCode ? path.slice(1).split("/")[0] : null,
+			code,
 			title: document.title,
 		};
 	}

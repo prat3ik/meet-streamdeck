@@ -48,6 +48,9 @@ wss.on("connection", (ws) => {
 		conn.focused = !!msg.focused;
 		conn.activeTabId = msg.activeTabId ?? null;
 		conn.tabs = Array.isArray(msg.tabs) ? msg.tabs : [];
+		const summary = `focused=${conn.focused} active=${conn.activeTabId} tabs=${JSON.stringify(conn.tabs.map(({ tabId, kind, mic, cam, code }) => ({ tabId, kind, mic, cam, code })))}`;
+		if (summary !== conn.lastSummary) log.info(`profile #${conn.id}: ${summary}`);
+		conn.lastSummary = summary;
 		refresh();
 	});
 	ws.on("close", () => {
